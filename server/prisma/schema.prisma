@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  profile      Profile?
+  meals        Meal[]
+  workouts     Workout[]
+}
+
+model Profile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  age            Int?
+  gender         String?  // "male" | "female"
+  heightCm       Float?
+  weightKg       Float?
+  activityLevel  String?  // sedentary | light | moderate | active | very_active
+  goalType       String?  // bulk | lean | maintain
+  bmr            Float?
+  tdee           Float?
+  calorieTarget  Float?
+  proteinTarget  Float?   // grams
+  updatedAt      DateTime @updatedAt
+}
+
+// Master food list (preloaded Indian foods + AI-fetched additions), values per 100g
+model Food {
+  id               String   @id @default(cuid())
+  name             String   @unique
+  category         String?
+  caloriesPer100g  Float
+  proteinPer100g   Float
+  carbsPer100g     Float
+  fatPer100g       Float
+  source           String   @default("preloaded") // preloaded | ai
+  createdAt        DateTime @default(now())
+  mealItems        MealItem[]
+}
+
+model Meal {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime   @default(now()) // date of the log (day granularity used)
+  mealType  String     // breakfast | lunch | dinner | snack
+  items     MealItem[]
+  createdAt DateTime   @default(now())
+}
+
+model MealItem {
+  id            String  @id @default(cuid())
+  mealId        String
+  meal          Meal    @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  foodId        String
+  food          Food    @relation(fields: [foodId], references: [id])
+  quantityGrams Float
+}
+
+model Workout {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime   @default(now())
+  name      String?    // e.g. "Push Day"
+  exercises Exercise[]
+  createdAt DateTime   @default(now())
+}
+
+model Exercise {
+  id         String        @id @default(cuid())
+  workoutId  String
+  workout    Workout       @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  name       String
+  order      Int           @default(0)
+  sets       ExerciseSet[]
+}
+
+model ExerciseSet {
+  id         String   @id @default(cuid())
+  exerciseId String
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  setNumber  Int
+  reps       Int
+  weightKg   Float?
+}
